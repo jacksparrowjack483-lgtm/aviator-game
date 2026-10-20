@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Aviator — Crash Game</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ===== TOP NAVBAR ===== -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="logo-aviator">✈ <em>Aviator</em></span>
+  </div>
+  <div class="topbar-mid">
+    <!-- Previous crash multiplier history pills -->
+    <div class="history-row" id="history-row"></div>
+  </div>
+  <div class="topbar-right">
+    <span class="balance-display" id="top-balance">29,810.00 USD</span>
+    <button class="icon-btn">☰</button>
+  </div>
+</header>
+
+<!-- ===== MAIN LAYOUT ===== -->
+<div class="main-wrap">
+
+  <!-- LEFT: BETS LIST -->
+  <aside class="bets-panel">
+    <div class="bets-tabs">
+      <button class="tab active" onclick="switchTab(this,'all')">All Bets</button>
+      <button class="tab" onclick="switchTab(this,'prev')">Previous</button>
+      <button class="tab" onclick="switchTab(this,'top')">Top</button>
+    </div>
+    <div class="bets-summary">
+      <span id="bets-count">126/131 Bets</span>
+      <span id="bets-total">Total win USD</span>
+      <span id="bets-win-total">223.00</span>
+    </div>
+    <div class="bets-header-row">
+      <span>Player</span><span>Bet USD</span><span>X</span><span>Win USD</span>
+    </div>
+    <div class="bets-list" id="bets-list"></div>
+    <div class="bets-footer">Provably Fair Game &nbsp;⚡&nbsp; Powered by SPRIBE</div>
+  </aside>
+
+  <!-- CENTER: GAME CANVAS AREA -->
+  <section class="game-area">
+
+    <!-- FUN MODE / SIGNAL mode banner -->
+    <div class="mode-banner" id="mode-banner">FUN MODE</div>
+
+    <!-- SIGNAL PANEL (toggle) -->
+    <div class="signal-panel" id="signal-panel" style="display:none">
+      <div class="signal-title">🎯 SIGNAL MODE — CRASH PREDICTOR</div>
+      <div class="signal-body">
+        <div class="sig-row">
+          <span class="sig-label">Next Predicted Crash:</span>
+          <span class="sig-value crash-pred" id="sig-crash">—</span>
+        </div>
+        <div class="sig-row">
+          <span class="sig-label">Safe Cash-out Zone:</span>
+          <span class="sig-value safe-zone" id="sig-safe">—</span>
+        </div>
+        <div class="sig-row">
+          <span class="sig-label">Risk Level:</span>
+          <span class="sig-value" id="sig-risk">—</span>
+        </div>
+        <div class="sig-row">
+          <span class="sig-label">Confidence:</span>
+          <div class="conf-bar-wrap"><div class="conf-bar" id="conf-bar" style="width:0%"></div></div>
+          <span class="sig-value" id="conf-pct">0%</span>
+        </div>
+        <div class="signal-history">
+          <div class="sh-title">Last 5 Predictions vs Actual</div>
+          <div id="sig-history-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANVAS -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Multiplier display -->
+    <div class="multiplier-display" id="multi-display">
+      <span id="multi-text">1.00x</span>
+      <div class="multi-sub" id="multi-sub">Waiting for next round...</div>
+    </div>
+
+    <!-- Plane SVG overlay -->
+    <div class="plane-wrap" id="plane-wrap" style="display:none">
+      <svg class="plane-svg" viewBox="0 0 80 50" xmlns="http://www.w3.org/2000/svg">
+        <!-- Body -->
+        <ellipse cx="40" cy="26" rx="28" ry="10" fill="#e8e8e8"/>
+        <!-- Nose -->
+        <path d="M68 26 Q80 22 80 26 Q80 30 68 26Z" fill="#cccccc"/>
+        <!-- Tail -->
+        <path d="M12 26 L8 14 L22 22Z" fill="#cccccc"/>
+        <path d="M14 26 L10 38 L22 30Z" fill="#cccccc"/>
+        <!-- Wing -->
+        <path d="M30 24 L18 10 L50 22Z" fill="#dddddd"/>
+        <!-- Window -->
+        <ellipse cx="52" cy="24" rx="4" ry="3" fill="#88ccff"/>
+        <ellipse cx="62" cy="24" rx="3" ry="2.5" fill="#88ccff"/>
+        <!-- Engine flame -->
+        <path d="M12 28 Q0 26 4 24 Q0 22 12 24Z" fill="#ff6600" opacity="0.9">
+          <animate attributeName="opacity" values="0.9;0.5;0.9" dur="0.3s" repeatCount="indefinite"/>
+        </path>
+        <!-- Red accent -->
+        <rect x="14" y="20" width="54" height="2" rx="1" fill="#e94560" opacity="0.5"/>
+      </svg>
+    </div>
+
+    <!-- CRASHED overlay -->
+    <div class="crashed-overlay" id="crashed-overlay" style="display:none">
+      <div class="crashed-text">FLEW AWAY!</div>
+      <div class="crashed-mult" id="crashed-mult">0.00x</div>
+    </div>
+
+    <!-- Bottom controls -->
+    <div class="controls-row">
+
+      <!-- BET PANEL 1 -->
+      <div class="bet-panel">
+        <div class="bet-panel-tabs">
+          <button class="bptab active" onclick="setBetMode(this,1,'manual')">Bet</button>
+          <button class="bptab" onclick="setBetMode(this,1,'auto')">Auto</button>
+        </div>
+        <div class="bet-controls">
+          <div class="amount-row">
+            <button class="amt-btn" onclick="changeAmt(1,-10)">−</button>
+            <input type="number" id="bet1-amount" class="amt-input" value="100.00" step="1" min="1"/>
+            <button class="amt-btn" onclick="changeAmt(1,10)">+</button>
+          </div>
+          <div class="quick-amts">
+            <button onclick="setAmt(1,1)">1</button>
+            <button onclick="setAmt(1,2)">2</button>
+            <button onclick="setAmt(1,5)">5</button>
+            <button onclick="setAmt(1,10)">10</button>
+          </div>
+          <button class="bet-btn green" id="bet1-btn" onclick="placeBet(1)">
+            Bet<br/><span id="bet1-label">100.00 USD</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- BET PANEL 2 -->
+      <div class="bet-panel">
+        <div class="bet-panel-tabs">
+          <button class="bptab active" onclick="setBetMode(this,2,'manual')">Bet</button>
+          <button class="bptab" onclick="setBetMode(this,2,'auto')">Auto</button>
+          <button class="bptab icon-only">⊟</button>
+        </div>
+        <div class="bet-controls">
+          <div class="amount-row">
+            <button class="amt-btn" onclick="changeAmt(2,-10)">−</button>
+            <input type="number" id="bet2-amount" class="amt-input" value="80.00" step="1" min="1"/>
+            <button class="amt-btn" onclick="changeAmt(2,10)">+</button>
+          </div>
+          <div class="quick-amts">
+            <button onclick="setAmt(2,1)">1</button>
+            <button onclick="setAmt(2,2)">2</button>
+            <button onclick="setAmt(2,5)">5</button>
+            <button onclick="setAmt(2,10)">10</button>
+          </div>
+          <button class="bet-btn green" id="bet2-btn" onclick="placeBet(2)">
+            Bet<br/><span id="bet2-label">80.00 USD</span>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- end controls-row -->
+
+  </section><!-- end game-area -->
+
+</div><!-- end main-wrap -->
+
+<!-- SIGNAL TOGGLE BUTTON -->
+<button class="signal-fab" onclick="toggleSignal()" title="Signal Mode">
+  🎯 SIGNAL
+</button>
+
+<!-- WIN TOAST -->
+<div class="win-toast" id="win-toast" style="display:none">
+  <span id="win-toast-msg">You cashed out! +500 USD</span>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
